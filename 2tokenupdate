@@ -12,7 +12,7 @@ from tqdm import tqdm  # ✅ for progress bar
 # =========================================================
 class SMSTokenService:
     def __init__(self, auth_url, client_id, client_secret, expire_in_seconds=1770):
-        self.auth_url = auth_url
+        self.auth_url = auth_url  # ✅ Use explicit auth URL
         self.client_id = client_id
         self.client_secret = client_secret
         self.expire_in = timedelta(seconds=expire_in_seconds)
@@ -59,11 +59,11 @@ class SMSTokenService:
 # MAIN CLASS - SMS DELIVERY REPORT
 # =========================================================
 class SMSDeliveryReport:
-    def __init__(self, client_id, client_secret, api_base, input_csv, output_csv, log_dir="logs"):
+    def __init__(self, auth_url, client_id, client_secret, api_base, input_csv, output_csv, log_dir="logs"):
         self.api_base = api_base.rstrip("/")
+        self.auth_url = auth_url  # ✅ explicitly passed
         self.input_csv = input_csv
         self.output_csv = output_csv
-        self.auth_url = f"{self.api_base}/oauth/token"
         self.phones_url = f"{self.api_base}/phones"
         self.outbound_url = f"{self.api_base}/outbound-messages"
 
@@ -247,6 +247,7 @@ class SMSDeliveryReport:
 # MAIN ENTRY
 # =========================================================
 if __name__ == "__main__":
+    AUTH_URL = "https://auth.example.com/v2/token"  # ✅ Actual auth URL
     CLIENT_ID = "your-client-id"
     CLIENT_SECRET = "your-client-secret"
     API_BASE = "https://api.example.com/v1"
@@ -254,6 +255,7 @@ if __name__ == "__main__":
     OUTPUT_CSV = "SMS_Delivery_Report.csv"
 
     report = SMSDeliveryReport(
+        auth_url=AUTH_URL,               # ✅ Explicitly pass auth URL
         client_id=CLIENT_ID,
         client_secret=CLIENT_SECRET,
         api_base=API_BASE,
