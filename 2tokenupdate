@@ -1,0 +1,28 @@
+from datetime import datetime, timezone
+
+for msg in messages:
+    expire_time = msg.get("expire_at")
+    expired_status = ""
+    if expire_time:
+        expire_dt = datetime.fromisoformat(expire_time.replace("Z", "+00:00"))
+        expired_status = "EXPIRED" if expire_dt < datetime.now(timezone.utc) else "ACTIVE"
+    else:
+        expired_status = "UNKNOWN"
+
+    results.append({
+        "GMPI_ID": gmpi_id,
+        "Phone_id": phone_id,
+        "Phone_Number": phone,
+        "First_Name": first_name or msg.get("first_name", ""),
+        "Last_Name": last_name or msg.get("last_name", ""),
+        "Status": msg.get("status", ""),
+        "Deliver_on": msg.get("deliver_on", ""),
+        "expire_at": expire_time,
+        "created_at": msg.get("created_at", ""),
+        "updated_at": msg.get("updated_at", ""),
+        "program_id": msg.get("program_id", ""),
+        "template_id": msg.get("template_id", ""),
+        "API_CALLED_AT": start_time,
+        "DELIVERY_STATUS": msg.get("status", ""),
+        "EXPIRED_STATUS": expired_status   # 👈 New helpful column
+    })
