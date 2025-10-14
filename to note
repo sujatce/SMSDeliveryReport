@@ -1,0 +1,1 @@
+  self.auth_url = f"{self.api_base}/oauth/token"
