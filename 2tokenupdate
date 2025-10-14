@@ -1,28 +1,245 @@
-from datetime import datetime, timezone
+import requests
+import time
+import pandas as pd
+import os
+import logging
+from datetime import datetime, timedelta, timezone
 
-for msg in messages:
-    expire_time = msg.get("expire_at")
-    expired_status = ""
-    if expire_time:
-        expire_dt = datetime.fromisoformat(expire_time.replace("Z", "+00:00"))
-        expired_status = "EXPIRED" if expire_dt < datetime.now(timezone.utc) else "ACTIVE"
-    else:
-        expired_status = "UNKNOWN"
 
-    results.append({
-        "GMPI_ID": gmpi_id,
-        "Phone_id": phone_id,
-        "Phone_Number": phone,
-        "First_Name": first_name or msg.get("first_name", ""),
-        "Last_Name": last_name or msg.get("last_name", ""),
-        "Status": msg.get("status", ""),
-        "Deliver_on": msg.get("deliver_on", ""),
-        "expire_at": expire_time,
-        "created_at": msg.get("created_at", ""),
-        "updated_at": msg.get("updated_at", ""),
-        "program_id": msg.get("program_id", ""),
-        "template_id": msg.get("template_id", ""),
-        "API_CALLED_AT": start_time,
-        "DELIVERY_STATUS": msg.get("status", ""),
-        "EXPIRED_STATUS": expired_status   # 👈 New helpful column
-    })
+# === TOKEN SERVICE CLASS (updated like the first script) ===
+class SMSTokenService:
+    """Handles OAuth token retrieval and refresh for SMS API with expiration tracking."""
+
+    def __init__(self, client_id, client_secret, auth_url, logger=None, expire_in_seconds=1770):
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.auth_url = auth_url
+        self.logger = logger or logging.getLogger(__name__)
+        self.token = None
+        self.expire_in = timedelta(seconds=expire_in_seconds)
+        self.expire_at = datetime.now(timezone.utc)
+
+    def token_valid(self):
+        """Check if current token is still valid."""
+        return self.token is not None and datetime.now(timezone.utc) < self.expire_at
+
+    def renew_token(self):
+        """Request a new access token if expired or not yet set."""
+        if not self.token_valid():
+            self.logger.info("[AUTH] Requesting new access token...")
+            payload = {
+                "grant_type": "client_credentials",
+                "client_id": self.client_id,
+                "client_secret": self.client_secret
+            }
+            try:
+                response = requests.post(self.auth_url, data=payload)
+                self.logger.info(f"[AUTH] Response Status: {response.status_code}")
+
+                if response.status_code == 200:
+                    token_data = response.json()
+                    self.token = token_data.get("access_token")
+                    self.expire_at = datetime.now(timezone.utc) + self.expire_in
+                    self.logger.info("[AUTH] ✅ Access token received successfully.")
+                else:
+                    raise Exception(f"[AUTH ERROR] {response.status_code}: {response.text}")
+
+            except requests.exceptions.RequestException as e:
+                raise Exception(f"[AUTH ERROR] Request failed: {str(e)}")
+
+    def get_access_token(self):
+        """Returns a valid token, refreshing if needed."""
+        self.renew_token()
+        return self.token
+
+
+# === DELIVERY REPORT CLASS ===
+class SMSDeliveryReport:
+    def __init__(self, client_id, client_secret, api_base, input_csv, output_csv, log_dir="logs"):
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.api_base = api_base.rstrip("/")
+        self.auth_url = f"{self.api_base}/oauth/token"
+        self.phones_url = f"{self.api_base}/phones"
+        self.outbound_url = f"{self.api_base}/outbound-messages"
+        self.input_csv = input_csv
+        self.output_csv = output_csv
+
+        # === Setup Logging ===
+        os.makedirs(log_dir, exist_ok=True)
+        log_filename = os.path.join(
+            log_dir,
+            f"SMS_Delivery_Report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+        )
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s [%(levelname)s] %(message)s",
+            handlers=[
+                logging.FileHandler(log_filename, encoding="utf-8"),
+                logging.StreamHandler()
+            ]
+        )
+        self.logger = logging.getLogger(__name__)
+        self.logger.info(f"📁 Log file created at: {log_filename}")
+
+        # === Create token service instance ===
+        self.token_service = SMSTokenService(client_id, client_secret, self.auth_url, self.logger)
+
+    # === PHONE LOOKUP ===
+    def get_phone_id(self, number, country_code="US"):
+        token = self.token_service.get_access_token()
+        headers = {"Authorization": f"Bearer {token}"}
+        params = {"number": number, "country-code": country_code}
+
+        self.logger.info(f"[LOOKUP] Checking phone number: {number}")
+        response = requests.get(self.phones_url, headers=headers, params=params)
+
+        if response.status_code == 200:
+            phones = response.json().get("phone", [])
+            if phones:
+                phone_id = phones[0]["id"]
+                self.logger.info(f"  ✅ Found phone ID: {phone_id}")
+                return phone_id
+            else:
+                self.logger.warning(f"  ❌ No phone record found for {number}")
+        else:
+            self.logger.warning(f"  ⚠️ Error retrieving phone: {response.status_code} - {response.text}")
+
+        return None
+
+    # === OUTBOUND MESSAGES ===
+    def get_outbound_messages(self, phone_id):
+        token = self.token_service.get_access_token()
+        headers = {"Authorization": f"Bearer {token}"}
+        params = {"phone-id": phone_id, "per-page": 250}
+
+        self.logger.info(f"[MESSAGES] Fetching outbound messages for phone ID: {phone_id}")
+        response = requests.get(self.outbound_url, headers=headers, params=params)
+
+        if response.status_code == 200:
+            messages = response.json().get("outbound-message", [])
+            self.logger.info(f"  📬 Retrieved {len(messages)} messages")
+            return messages
+        else:
+            self.logger.warning(f"  ⚠️ No messages found (status {response.status_code})")
+            return []
+
+    # === MAIN PROCESS ===
+    def generate_report(self):
+        df = pd.read_csv(self.input_csv)
+        results = []
+        self.logger.info(f"\n🚀 Starting SMS Delivery Report generation for {len(df)} members...\n")
+
+        for _, row in df.iterrows():
+            phone = str(row["MEMBER_PHONE"]).strip()
+            country = row.get("COUNTRY_CODE", "US")
+            gmpi_id = row.get("GMPI_ID", "")
+            first_name = str(row.get("FIRST_NAME", "")).strip()
+            last_name = str(row.get("LAST_NAME", "")).strip()
+            start_time = datetime.now(timezone.utc).isoformat()
+
+            try:
+                phone_id = self.get_phone_id(phone, country)
+                if not phone_id:
+                    results.append({
+                        "GMPI_ID": gmpi_id,
+                        "Phone_id": "",
+                        "Phone_Number": phone,
+                        "First_Name": first_name,
+                        "Last_Name": last_name,
+                        "Status": "NOT_FOUND",
+                        "Deliver_on": "",
+                        "expire_at": "",
+                        "created_at": "",
+                        "updated_at": "",
+                        "program_id": "",
+                        "template_id": "",
+                        "API_CALLED_AT": start_time,
+                        "DELIVERY_STATUS": "No phone record found"
+                    })
+                    continue
+
+                messages = self.get_outbound_messages(phone_id)
+
+                if not messages:
+                    results.append({
+                        "GMPI_ID": gmpi_id,
+                        "Phone_id": phone_id,
+                        "Phone_Number": phone,
+                        "First_Name": first_name,
+                        "Last_Name": last_name,
+                        "Status": "NO_MESSAGES",
+                        "Deliver_on": "",
+                        "expire_at": "",
+                        "created_at": "",
+                        "updated_at": "",
+                        "program_id": "",
+                        "template_id": "",
+                        "API_CALLED_AT": start_time,
+                        "DELIVERY_STATUS": "No outbound messages found"
+                    })
+                    continue
+
+                # === Parse Outbound Message Details ===
+                for msg in messages:
+                    results.append({
+                        "GMPI_ID": gmpi_id,
+                        "Phone_id": phone_id,
+                        "Phone_Number": phone,
+                        "First_Name": first_name or msg.get("first_name", ""),
+                        "Last_Name": last_name or msg.get("last_name", ""),
+                        "Status": msg.get("status", ""),
+                        "Deliver_on": msg.get("deliver_on", ""),
+                        "expire_at": msg.get("expire_at", ""),
+                        "created_at": msg.get("created_at", ""),
+                        "updated_at": msg.get("updated_at", ""),
+                        "program_id": msg.get("program_id", ""),
+                        "template_id": msg.get("template_id", ""),
+                        "API_CALLED_AT": start_time,
+                        "DELIVERY_STATUS": msg.get("status", "")
+                    })
+
+            except Exception as e:
+                self.logger.error(f"  ❌ Error while processing {phone}: {str(e)}", exc_info=False)
+                results.append({
+                    "GMPI_ID": gmpi_id,
+                    "Phone_id": "",
+                    "Phone_Number": phone,
+                    "First_Name": first_name,
+                    "Last_Name": last_name,
+                    "Status": "ERROR",
+                    "Deliver_on": "",
+                    "expire_at": "",
+                    "created_at": "",
+                    "updated_at": "",
+                    "program_id": "",
+                    "template_id": "",
+                    "API_CALLED_AT": start_time,
+                    "DELIVERY_STATUS": str(e)
+                })
+
+            # Avoid rate limits
+            time.sleep(0.3)
+
+        # === Save Output ===
+        pd.DataFrame(results).to_csv(self.output_csv, index=False)
+        self.logger.info(f"\n✅ SMS Delivery Report generated successfully: {self.output_csv}")
+
+
+# === MAIN ENTRY ===
+if __name__ == "__main__":
+    CLIENT_ID = "your-client-id"
+    CLIENT_SECRET = "your-client-secret"
+    API_BASE = "https://api.example.com/v1"
+    INPUT_CSV = "Member_Phone_List.csv"
+    OUTPUT_CSV = "SMS_Delivery_Report.csv"
+
+    report = SMSDeliveryReport(
+        client_id=CLIENT_ID,
+        client_secret=CLIENT_SECRET,
+        api_base=API_BASE,
+        input_csv=INPUT_CSV,
+        output_csv=OUTPUT_CSV
+    )
+
+    report.generate_report()
