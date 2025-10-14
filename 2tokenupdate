@@ -4,29 +4,27 @@ import pandas as pd
 import os
 import logging
 from datetime import datetime, timedelta, timezone
+from tqdm import tqdm  # ✅ for progress bar
 
 
-# === TOKEN SERVICE CLASS (updated like the first script) ===
+# =========================================================
+# TOKEN SERVICE CLASS
+# =========================================================
 class SMSTokenService:
-    """Handles OAuth token retrieval and refresh for SMS API with expiration tracking."""
-
-    def __init__(self, client_id, client_secret, auth_url, logger=None, expire_in_seconds=1770):
+    def __init__(self, auth_url, client_id, client_secret, expire_in_seconds=1770):
+        self.auth_url = auth_url
         self.client_id = client_id
         self.client_secret = client_secret
-        self.auth_url = auth_url
-        self.logger = logger or logging.getLogger(__name__)
-        self.token = None
         self.expire_in = timedelta(seconds=expire_in_seconds)
+        self.token = None
         self.expire_at = datetime.now(timezone.utc)
 
     def token_valid(self):
-        """Check if current token is still valid."""
         return self.token is not None and datetime.now(timezone.utc) < self.expire_at
 
     def renew_token(self):
-        """Request a new access token if expired or not yet set."""
         if not self.token_valid():
-            self.logger.info("[AUTH] Requesting new access token...")
+            logging.info("[AUTH] Requesting new access token...")
             payload = {
                 "grant_type": "client_credentials",
                 "client_id": self.client_id,
@@ -34,38 +32,42 @@ class SMSTokenService:
             }
             try:
                 response = requests.post(self.auth_url, data=payload)
-                self.logger.info(f"[AUTH] Response Status: {response.status_code}")
-
+                logging.info(f"[AUTH] Response Status: {response.status_code}")
                 if response.status_code == 200:
                     token_data = response.json()
                     self.token = token_data.get("access_token")
                     self.expire_at = datetime.now(timezone.utc) + self.expire_in
-                    self.logger.info("[AUTH] ✅ Access token received successfully.")
+                    logging.info("[AUTH] ✅ Access token received successfully.")
                 else:
                     raise Exception(f"[AUTH ERROR] {response.status_code}: {response.text}")
-
             except requests.exceptions.RequestException as e:
                 raise Exception(f"[AUTH ERROR] Request failed: {str(e)}")
 
-    def get_access_token(self):
-        """Returns a valid token, refreshing if needed."""
+    def get_token(self):
         self.renew_token()
         return self.token
 
+    def get_headers(self):
+        return {
+            "Authorization": f"Bearer {self.get_token()}",
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
 
-# === DELIVERY REPORT CLASS ===
+
+# =========================================================
+# MAIN CLASS - SMS DELIVERY REPORT
+# =========================================================
 class SMSDeliveryReport:
     def __init__(self, client_id, client_secret, api_base, input_csv, output_csv, log_dir="logs"):
-        self.client_id = client_id
-        self.client_secret = client_secret
         self.api_base = api_base.rstrip("/")
+        self.input_csv = input_csv
+        self.output_csv = output_csv
         self.auth_url = f"{self.api_base}/oauth/token"
         self.phones_url = f"{self.api_base}/phones"
         self.outbound_url = f"{self.api_base}/outbound-messages"
-        self.input_csv = input_csv
-        self.output_csv = output_csv
 
-        # === Setup Logging ===
+        # -------------------- Setup Logging --------------------
         os.makedirs(log_dir, exist_ok=True)
         log_filename = os.path.join(
             log_dir,
@@ -79,61 +81,79 @@ class SMSDeliveryReport:
                 logging.StreamHandler()
             ]
         )
-        self.logger = logging.getLogger(__name__)
-        self.logger.info(f"📁 Log file created at: {log_filename}")
+        logging.info(f"📁 Log file created at: {log_filename}")
 
-        # === Create token service instance ===
-        self.token_service = SMSTokenService(client_id, client_secret, self.auth_url, self.logger)
+        # -------------------- Token Service --------------------
+        self.token_service = SMSTokenService(
+            auth_url=self.auth_url,
+            client_id=client_id,
+            client_secret=client_secret
+        )
 
-    # === PHONE LOOKUP ===
+    # =========================================================
+    # PHONE LOOKUP
+    # =========================================================
     def get_phone_id(self, number, country_code="US"):
-        token = self.token_service.get_access_token()
-        headers = {"Authorization": f"Bearer {token}"}
+        headers = self.token_service.get_headers()
         params = {"number": number, "country-code": country_code}
 
-        self.logger.info(f"[LOOKUP] Checking phone number: {number}")
-        response = requests.get(self.phones_url, headers=headers, params=params)
+        logging.info(f"[LOOKUP] 🔍 Checking phone number: {number}")
+        try:
+            response = requests.get(self.phones_url, headers=headers, params=params, timeout=20)
+            logging.info(f"[LOOKUP] Status: {response.status_code}")
 
-        if response.status_code == 200:
-            phones = response.json().get("phone", [])
-            if phones:
-                phone_id = phones[0]["id"]
-                self.logger.info(f"  ✅ Found phone ID: {phone_id}")
-                return phone_id
+            if response.status_code == 200:
+                phones = response.json().get("phone", [])
+                if phones:
+                    phone_id = phones[0]["id"]
+                    logging.info(f"[LOOKUP] ✅ Found phone ID: {phone_id}")
+                    return phone_id
+                else:
+                    logging.warning(f"[LOOKUP] ❌ No phone record found for {number}")
             else:
-                self.logger.warning(f"  ❌ No phone record found for {number}")
-        else:
-            self.logger.warning(f"  ⚠️ Error retrieving phone: {response.status_code} - {response.text}")
+                logging.warning(f"[LOOKUP] ⚠️ Unexpected response: {response.status_code} - {response.text}")
+        except requests.exceptions.RequestException as e:
+            logging.error(f"[LOOKUP ERROR] {str(e)}")
 
         return None
 
-    # === OUTBOUND MESSAGES ===
+    # =========================================================
+    # OUTBOUND MESSAGE RETRIEVAL
+    # =========================================================
     def get_outbound_messages(self, phone_id):
-        token = self.token_service.get_access_token()
-        headers = {"Authorization": f"Bearer {token}"}
+        headers = self.token_service.get_headers()
         params = {"phone-id": phone_id, "per-page": 250}
 
-        self.logger.info(f"[MESSAGES] Fetching outbound messages for phone ID: {phone_id}")
-        response = requests.get(self.outbound_url, headers=headers, params=params)
+        logging.info(f"[MESSAGES] 📩 Fetching outbound messages for phone ID: {phone_id}")
+        try:
+            response = requests.get(self.outbound_url, headers=headers, params=params, timeout=20)
+            logging.info(f"[MESSAGES] Status: {response.status_code}")
 
-        if response.status_code == 200:
-            messages = response.json().get("outbound-message", [])
-            self.logger.info(f"  📬 Retrieved {len(messages)} messages")
-            return messages
-        else:
-            self.logger.warning(f"  ⚠️ No messages found (status {response.status_code})")
-            return []
+            if response.status_code == 200:
+                messages = response.json().get("outbound-message", [])
+                logging.info(f"[MESSAGES] Retrieved {len(messages)} messages.")
+                return messages
+            else:
+                logging.warning(f"[MESSAGES] ⚠️ No messages found or unexpected status: {response.status_code}")
+        except requests.exceptions.RequestException as e:
+            logging.error(f"[MESSAGES ERROR] {str(e)}")
 
-    # === MAIN PROCESS ===
+        return []
+
+    # =========================================================
+    # MAIN REPORT PROCESS
+    # =========================================================
     def generate_report(self):
         df = pd.read_csv(self.input_csv)
         results = []
-        self.logger.info(f"\n🚀 Starting SMS Delivery Report generation for {len(df)} members...\n")
+        total = len(df)
+        logging.info(f"\n🚀 Starting SMS Delivery Report generation for {total} members...\n")
 
-        for _, row in df.iterrows():
+        # ✅ tqdm progress bar
+        for _, row in tqdm(df.iterrows(), total=total, desc="Processing phones", unit="record"):
             phone = str(row["MEMBER_PHONE"]).strip()
-            country = row.get("COUNTRY_CODE", "US")
-            gmpi_id = row.get("GMPI_ID", "")
+            country = str(row.get("COUNTRY_CODE", "US")).strip()
+            gmpi_id = str(row.get("GMPI_ID", "")).strip()
             first_name = str(row.get("FIRST_NAME", "")).strip()
             last_name = str(row.get("LAST_NAME", "")).strip()
             start_time = datetime.now(timezone.utc).isoformat()
@@ -160,7 +180,6 @@ class SMSDeliveryReport:
                     continue
 
                 messages = self.get_outbound_messages(phone_id)
-
                 if not messages:
                     results.append({
                         "GMPI_ID": gmpi_id,
@@ -180,7 +199,6 @@ class SMSDeliveryReport:
                     })
                     continue
 
-                # === Parse Outbound Message Details ===
                 for msg in messages:
                     results.append({
                         "GMPI_ID": gmpi_id,
@@ -200,7 +218,7 @@ class SMSDeliveryReport:
                     })
 
             except Exception as e:
-                self.logger.error(f"  ❌ Error while processing {phone}: {str(e)}", exc_info=False)
+                logging.error(f"[ERROR] ❌ Processing {phone}: {str(e)}")
                 results.append({
                     "GMPI_ID": gmpi_id,
                     "Phone_id": "",
@@ -218,15 +236,16 @@ class SMSDeliveryReport:
                     "DELIVERY_STATUS": str(e)
                 })
 
-            # Avoid rate limits
-            time.sleep(0.3)
+            time.sleep(0.3)  # prevent rate limits
 
-        # === Save Output ===
+        # Save Output
         pd.DataFrame(results).to_csv(self.output_csv, index=False)
-        self.logger.info(f"\n✅ SMS Delivery Report generated successfully: {self.output_csv}")
+        logging.info(f"\n✅ SMS Delivery Report generated successfully: {self.output_csv}")
 
 
-# === MAIN ENTRY ===
+# =========================================================
+# MAIN ENTRY
+# =========================================================
 if __name__ == "__main__":
     CLIENT_ID = "your-client-id"
     CLIENT_SECRET = "your-client-secret"
