@@ -1,0 +1,22 @@
+2025-10-15 15:56:22,450 [INFO] [MESSAGES] Retrieved 59 messages.
+Processing phones: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:03<00:00,  1.58s/record]
+Traceback (most recent call last):
+  File "C:\Users\smarim18\Documents\SMSDelivery_Report\SMSDelivery.py", line 312, in <module>
+    report.generate_report()
+  File "C:\Users\smarim18\Documents\SMSDelivery_Report\SMSDelivery.py", line 285, in generate_report
+    output_df.to_csv(self.output_csv, index=False)
+  File "C:\Users\smarim18\AppData\Roaming\Python\Python312\site-packages\pandas\util\_decorators.py", line 333, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\smarim18\AppData\Roaming\Python\Python312\site-packages\pandas\core\generic.py", line 3967, in to_csv
+    return DataFrameRenderer(formatter).to_csv(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\smarim18\AppData\Roaming\Python\Python312\site-packages\pandas\io\formats\format.py", line 1014, in to_csv
+    csv_formatter.save()
+  File "C:\Users\smarim18\AppData\Roaming\Python\Python312\site-packages\pandas\io\formats\csvs.py", line 251, in save
+    with get_handle(
+         ^^^^^^^^^^^
+  File "C:\Users\smarim18\AppData\Roaming\Python\Python312\site-packages\pandas\io\common.py", line 873, in get_handle
+    handle = open(
+             ^^^^^
+PermissionError: [Errno 13] Permission denied: 'SMSDelivery_Report.csv'
