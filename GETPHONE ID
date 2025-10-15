@@ -1,0 +1,28 @@
+# =========================================================
+# PHONE LOOKUP (Updated)
+# =========================================================
+def get_phone_id(self, number, country_code="US"):
+    headers = self.token_service.get_headers()
+    params = {"number": number, "country-code": country_code}
+
+    logging.info(f"[LOOKUP] 🔍 Checking phone number: {number}")
+    try:
+        response = requests.get(self.phones_url, headers=headers, params=params, timeout=20)
+        logging.info(f"[LOOKUP] Status: {response.status_code}")
+
+        if response.status_code == 200:
+            phones = response.json().get("phone", [])
+            if phones:
+                phone_id = phones[0]["id"]
+                logging.info(f"[LOOKUP] ✅ Found phone ID: {phone_id}")
+                return phone_id
+            else:
+                logging.warning(f"[LOOKUP] ❌ No phone record found for {number}")
+                return None
+        else:
+            logging.warning(f"[LOOKUP] ⚠️ Unexpected response: {response.status_code} - {response.text}")
+            return None
+
+    except requests.exceptions.RequestException as e:
+        logging.error(f"[LOOKUP ERROR] {str(e)}")
+        return "LOOKUP_ERROR"
