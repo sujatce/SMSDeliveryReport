@@ -1,3 +1,69 @@
+PS C:\Users\smarim18\Documents\SMSDelivery_Report> python SMSDelivery.py
+2025-10-15 23:33:55,252 [INFO] 📁 Log file created at: logs\SMS_Delivery_Report_20251015_233355.log
+2025-10-15 23:33:55,261 [INFO] 
+🚀 Starting SMS Delivery Report generation for 4 members...
+
+Processing phones:   0%|                                                                                                     | 0/4 [00:00<?, ?record/s]2025-10-15 23:33:55,271 [INFO] [AUTH] Requesting new access token...
+2025-10-15 23:33:55,681 [INFO] [AUTH] Response Status: 200
+2025-10-15 23:33:55,681 [INFO] [AUTH] ✅ Access token received successfully.
+2025-10-15 23:33:55,681 [INFO] [LOOKUP] 🔍 Checking phone number: 5626507964
+2025-10-15 23:33:56,151 [INFO] [LOOKUP] Status: 200
+2025-10-15 23:33:56,152 [INFO] [LOOKUP] ✅ Found phone ID: 32308038
+2025-10-15 23:33:56,153 [INFO] [MESSAGES] 📩 Fetching outbound messages for phone ID: 32308038
+2025-10-15 23:33:56,621 [INFO] [MESSAGES] Page 1 → Status: 200
+2025-10-15 23:33:56,622 [INFO] [MESSAGES] Retrieved 13 messages from page 1.
+2025-10-15 23:33:57,431 [INFO] [MESSAGES] Page 2 → Status: 422
+2025-10-15 23:33:57,432 [WARNING] [MESSAGES] ⚠️ Unexpected status: 422
+2025-10-15 23:33:57,433 [INFO] [MESSAGES] 📦 Total messages fetched for phone ID 32308038: 13
+Processing phones:  25%|███████████████████████▎                                                                     | 1/4 [00:02<00:07,  2.46s/record]2025-10-15 23:33:57,735 [INFO] [LOOKUP] 🔍 Checking phone number: 3104186595
+2025-10-15 23:33:58,131 [INFO] [LOOKUP] Status: 200
+2025-10-15 23:33:58,132 [INFO] [LOOKUP] ✅ Found phone ID: 32308432
+2025-10-15 23:33:58,133 [INFO] [MESSAGES] 📩 Fetching outbound messages for phone ID: 32308432
+2025-10-15 23:33:58,534 [INFO] [MESSAGES] Page 1 → Status: 200
+2025-10-15 23:33:58,535 [INFO] [MESSAGES] Retrieved 21 messages from page 1.
+2025-10-15 23:33:59,130 [INFO] [MESSAGES] Page 2 → Status: 422
+2025-10-15 23:33:59,131 [WARNING] [MESSAGES] ⚠️ Unexpected status: 422
+2025-10-15 23:33:59,132 [INFO] [MESSAGES] 📦 Total messages fetched for phone ID 32308432: 21
+Processing phones:  50%|██████████████████████████████████████████████▌                                              | 2/4 [00:04<00:04,  2.01s/record]2025-10-15 23:33:59,435 [INFO] [LOOKUP] 🔍 Checking phone number: 4246107546
+2025-10-15 23:33:59,858 [INFO] [LOOKUP] Status: 200
+2025-10-15 23:33:59,859 [INFO] [LOOKUP] ✅ Found phone ID: 32221851
+2025-10-15 23:33:59,860 [INFO] [MESSAGES] 📩 Fetching outbound messages for phone ID: 32221851
+2025-10-15 23:34:00,259 [INFO] [MESSAGES] Page 1 → Status: 200
+2025-10-15 23:34:00,260 [INFO] [MESSAGES] Retrieved 20 messages from page 1.
+2025-10-15 23:34:00,848 [INFO] [MESSAGES] Page 2 → Status: 422
+2025-10-15 23:34:00,849 [WARNING] [MESSAGES] ⚠️ Unexpected status: 422
+2025-10-15 23:34:00,850 [INFO] [MESSAGES] 📦 Total messages fetched for phone ID 32221851: 20
+Processing phones:  75%|█████████████████████████████████████████████████████████████████████▊                       | 3/4 [00:05<00:01,  1.88s/record]2025-10-15 23:34:01,152 [INFO] [LOOKUP] 🔍 Checking phone number: 4243215161
+2025-10-15 23:34:01,570 [INFO] [LOOKUP] Status: 200
+2025-10-15 23:34:01,575 [INFO] [LOOKUP] ✅ Found phone ID: 32490519
+2025-10-15 23:34:01,576 [INFO] [MESSAGES] 📩 Fetching outbound messages for phone ID: 32490519
+2025-10-15 23:34:02,131 [INFO] [MESSAGES] Page 1 → Status: 200
+2025-10-15 23:34:02,133 [INFO] [MESSAGES] Retrieved 60 messages from page 1.
+2025-10-15 23:34:02,716 [INFO] [MESSAGES] Page 2 → Status: 422
+2025-10-15 23:34:02,718 [WARNING] [MESSAGES] ⚠️ Unexpected status: 422
+2025-10-15 23:34:02,718 [INFO] [MESSAGES] 📦 Total messages fetched for phone ID 32490519: 60
+Processing phones: 100%|█████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:07<00:00,  1.94s/record]
+2025-10-15 23:34:03,032 [INFO]
+✅ SMS Delivery Report generated successfully: SMSDelivery_Report.csv
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Parameters
 Parameter	Value	Description	Parameter Type	Data Type
 phone-id	
