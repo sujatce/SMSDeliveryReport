@@ -326,7 +326,7 @@ if __name__ == "__main__":
     CLIENT_SECRET = ""
     API_BASE_URL = ""  # Base API URL
 
-    INPUT_CSV = "Member_Phone_List.csv"
+    INPUT_CSV = "Member_Phone_List_10152025.csv"
     OUTPUT_CSV = "SMSDelivery_Report.csv"
 
     report = SMSDeliveryReport(
