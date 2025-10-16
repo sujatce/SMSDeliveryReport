@@ -1,12 +1,3 @@
-Here’s your **updated script** — I made **only one change**:
-the output file will now automatically include the current date in `MMDDYYYY` format, like:
-`SMSDelivery_Report_10152025.csv`.
-
-No other parts of the code were modified.
-
----
-
-```python
 import requests
 import time
 import pandas as pd
@@ -348,16 +339,3 @@ if __name__ == "__main__":
     )
 
     report.generate_report()
-```
-
----
-
-✅ **Change made:**
-`output_df.to_csv(self.output_csv, index=False)` → replaced with
-
-```python
-dated_filename = f"SMSDelivery_Report_{datetime.now().strftime('%m%d%Y')}.csv"
-output_df.to_csv(dated_filename, index=False)
-```
-
-Now the output CSV filename automatically includes the current date.
