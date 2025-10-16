@@ -1,36 +1,5 @@
-  {
-      "id": 133631872,
-      "vars": {},
-      "phone-id": 33333333,
-      "program-id": 798365,
-      "adapter-id": 400381,
-      "template-id": 1788409,
-      "service-response": "{\"message_id\":\"01K6XAYAT36JB1S50G5FYHJBVV\",\"conversation_id\":\"\",\"status\":\"QUEUED_ON_CHANNEL\",\"channel_identity\":{\"channel\":\"SMS\",\"identity\":\"14243215161\",\"app_id\":\"01K2JE73MT6N5A43W8MPF6NM46\"},\"contact_id\":\"\",\"metadata\":\"\",\"processing_mode\":\"DISPATCH\"}",
-      "generated-body": "From xxx: Get the right care at the right time, discover how we are here for you https://xxx.care/getcare Reply STOP to stop; HELP to help.",
-      "number_of_segments": 1,
-      "send-immediately": false,
-      "status": "received",
-      "deliver-on": "2025-10-06T17:38:32Z",
-      "expire-at": "2025-10-06T21:38:32Z",
-      "language": "eng",
-      "created-at": "2025-10-06T17:38:32Z",
-      "updated-at": "2025-10-06T18:01:12Z"
-    },
-    {
-      "id": 133631863,
-      "vars": {},
-      "phone-id": 33333333,
-      "program-id": 798365,
-      "adapter-id": 400381,
-      "template-id": 1788197,
-      "service-response": "{\"message_id\":\"01K6XAY95GHVEWSZ56FP6BEFC7\",\"conversation_id\":\"\",\"status\":\"DELIVERED\",\"channel_identity\":{\"channel\":\"SMS\",\"identity\":\"14243215161\",\"app_id\":\"01K2JE73MT6N5A43W8MPF6NM46\"},\"contact_id\":\"\",\"metadata\":\"\",\"processing_mode\":\"DISPATCH\"}",
-      "generated-body": "Welcome to Welcome yyyyy! Msg&data rates may apply. Msg frequency varies. Reply HELP for help or STOP to cancel.",
-      "number_of_segments": 1,
-      "send-immediately": false,
-      "status": "received",
-      "deliver-on": "2025-10-06T17:38:26Z",
-      "expire-at": "2025-10-09T17:38:26Z",
-      "language": "eng",
-      "created-at": "2025-10-06T17:38:26Z",
-      "updated-at": "2025-10-06T18:01:12Z"
-    },
+Carrier Level Response Status as Service Response Status
+
+SMS Manager API Status as API Response Status
+
+
