@@ -290,12 +290,15 @@ class SMSDeliveryReport:
 # MAIN ENTRY
 # =========================================================
 if __name__ == "__main__":
-    AUTH_URL = " "  # Replace with your auth endpoint
-    CLIENT_ID = " "
-    CLIENT_SECRET = " "
-    API_BASE_URL = " "  # Base API URL
+
+
+    AUTH_URL = ""  # Replace with actual auth endpoint
+    CLIENT_ID = ""
+    CLIENT_SECRET = ""
+    API_BASE_URL = ""  # Base API URL
+
     INPUT_CSV = "Member_Phone_List.csv"
-    OUTPUT_CSV = "SMSDelivery_Report_Log.csv"
+    OUTPUT_CSV = "SMSDelivery_Report.csv"
 
     report = SMSDeliveryReport(
         auth_url=AUTH_URL,
