@@ -11,9 +11,8 @@ from requests.adapters import HTTPAdapter, Retry
 # =========================================================
 # CONFIGURATION — ADD YOUR FILTERS HERE
 # =========================================================
-PROGRAM_FILTERS = ["12345"]          # ✅ Add one or more program IDs here
-TEMPLATE_FILTERS = ["6789", "6790"]  # ✅ Add one or more template IDs here
-
+PROGRAM_FILTERS = "798365"
+TEMPLATE_FILTERS = ["1788197","1788409"]#September short code is 1788409
 
 # =========================================================
 # RETRY SESSION HELPER (with retries for SSL/server errors)
@@ -266,10 +265,12 @@ class SMSDeliveryReport:
 # =========================================================
 if __name__ == "__main__":
 
-    AUTH_URL = ""          # Your Auth endpoint
-    CLIENT_ID = ""         # Your Client ID
-    CLIENT_SECRET = ""     # Your Client Secret
-    API_BASE_URL = ""      # Base API URL
+
+
+    AUTH_URL = ""  # Replace with actual auth endpoint
+    CLIENT_ID = ""
+    CLIENT_SECRET = " "
+    API_BASE_URL = " "  # Base API URL
 
     INPUT_CSV = "Member_Phone_List_10162025.csv"
     OUTPUT_CSV = "SMSDelivery_Report.csv"
